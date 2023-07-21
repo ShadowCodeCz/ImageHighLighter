@@ -26,7 +26,11 @@ class PrintScreenCommand:
         self.make_backup_copy(original_path)
 
         if arguments.rect:
-            subprocess.run(f"ihl rect -p {original_path}")
+            cmd = f"ihl rect -p {original_path}"
+            if arguments.rect_minimize:
+                subprocess.run(f"{cmd} -z")
+            else:
+                subprocess.run(cmd)
 
     def parse_variables(self):
         for raw_variable in self.arguments.variables:

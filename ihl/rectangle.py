@@ -152,5 +152,8 @@ class MainWindow(QtWidgets.QMainWindow):
 def run(arguments):
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow(arguments.path)
-    window.showMaximized()
+    if arguments.minimize:
+        window.showMinimized()
+    else:
+        window.showMaximized()
     app.exec_()
