@@ -60,6 +60,27 @@ class Canvas(QtWidgets.QLabel):
             self.destination = self.begin
             self.update()
 
+        if event.buttons() & Qt.RightButton:
+            dlg = QtWidgets.QInputDialog(self)
+            dlg.setStyleSheet("background-color: white")
+            dlg.setMinimumWidth(250)
+            text, ok = dlg.getText(self, 'Input Dialog', 'Text:')
+
+            self.undos.append(self.pixmap().copy())
+
+            painter = self.rectangle_painter(self.pixmap())
+            # https://stackoverflow.com/questions/57017820/how-to-add-a-text-on-imagepython-gui-pyqt5
+            # pen = QPen(Qt.red)
+            # pen.setWidth(2)
+            # qp.setPen(pen)
+            #
+            # font = QFont()
+            # font.setFamily('Times')
+            # font.setBold(True)
+            # font.setPointSize(24)
+            # qp.setFont(font)
+            painter.drawText(event.x(), event.y(), text)
+
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.LeftButton:
             self.destination = event.pos()
@@ -96,7 +117,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.path = path
         self.canvas = Canvas(path)
-        self.setStyleSheet("background-color: black;")
+        # self.setStyleSheet("background-color: black;")
 
         self.scrollArea = QtWidgets.QScrollArea()
         self.scrollArea.setBackgroundRole(QtGui.QPalette.Dark)
