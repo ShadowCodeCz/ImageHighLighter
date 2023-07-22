@@ -4,6 +4,7 @@ import logging.config
 
 
 from . import rectangle
+from . import extender
 from . import print_screen
 
 def main():
@@ -28,6 +29,24 @@ def main():
     print_screen_parser.add_argument("-z", "--rect_minimize", action='store_true')
     print_screen_parser.add_argument("-m", "--monitor", default=2)
     print_screen_parser.add_argument("-v", "--variables", default=[], nargs='*')
+
+    extender_parser = subparsers.add_parser('ext')
+    extender_parser.set_defaults(func=extender.run)
+    extender_parser.add_argument("-i", "--image_path")
+    extender_parser.add_argument("-o", "--output_path", default=None, help="If it is not set. The original image will overwrite.")
+    extender_parser.add_argument("-p", "--position", default="head", help="foot, head")
+    extender_parser.add_argument("-t", "--text", required=True)
+    extender_parser.add_argument("-a", "--text_align", default="center", help="left, center, right")
+    extender_parser.add_argument("-c", "--text_color", default="#FFFFFF", help="#FFFFFF, FFFFFF")
+    extender_parser.add_argument("-b", "--background_color", default="#000000", help="#000000")
+    extender_parser.add_argument("-f", "--font_path", default="FONTS/arial.ttf", help="FONTS/arial.ttf")
+    extender_parser.add_argument("-s", "--font_size", default=34, help="34")
+    extender_parser.add_argument("-v", "--vertical_padding", default=10, help="10")
+    extender_parser.add_argument("-n", "--horizontal_padding", default=10, help="10")
+
+    extender_parser = subparsers.add_parser('bect')
+    extender_parser.set_defaults(func=rectangle.run_for_all)
+    extender_parser.add_argument("-z", "--rect_minimize", action='store_true')
 
     arguments = parser.parse_args()
     arguments.func(arguments)

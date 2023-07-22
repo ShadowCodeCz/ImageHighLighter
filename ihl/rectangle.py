@@ -1,4 +1,6 @@
+import glob
 import os.path
+import subprocess
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
@@ -38,7 +40,7 @@ class Canvas(QtWidgets.QLabel):
         painter = QtGui.QPainter(obj)
 
         pen = painter.pen()
-        pen.setWidth(1)
+        pen.setWidth(2)
         pen.setColor(self.pen_color)
         painter.setPen(pen)
 
@@ -157,3 +159,15 @@ def run(arguments):
     else:
         window.showMaximized()
     app.exec_()
+
+
+def run_for_all(arguments):
+    images = []
+    suffixes = ["*.png", "*.jpg", "*.jpeg", "*.bmp"]
+    for s in suffixes:
+        for p in glob.glob(s):
+            cmd = f"ihl rect -p {p}"
+            if arguments.rect_minimize:
+                subprocess.Popen(f"{cmd} -z")
+            else:
+                subprocess.Popen(cmd)

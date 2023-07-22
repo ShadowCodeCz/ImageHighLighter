@@ -33,7 +33,7 @@ setup(
     long_description_content_type='text/markdown',
     classifiers=classifiers,
     keywords='ihl',
-    install_requires=["PyQt5", "mss"],
+    install_requires=["PyQt5", "mss", "Pillow"],
     entry_points={
         'console_scripts': [
             'ihl=ihl:main',
