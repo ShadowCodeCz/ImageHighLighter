@@ -59,7 +59,7 @@ class Extension:
 
     @property
     def font(self):
-        return ImageFont.truetype(self.font_path, self.font_size)
+        return ImageFont.truetype(self.font_path, int(self.font_size))
 
 
 class ImageExtender:
@@ -87,25 +87,25 @@ class ImageExtender:
 
     def count_x_position(self, extension, text_box):
         if extension.text_align == "left":
-            return int(extension.vertical_padding)
+            return int(extension.horizontal_padding)
         if extension.text_align == "center":
             return int((self.image.size[0] / 2) - (text_box[2] / 2))
         if extension.text_align == "right":
-            return int(self.image.size[0] - text_box[2] - extension.vertical_padding)
+            return int(self.image.size[0] - text_box[2] - int(extension.horizontal_padding))
 
     def add_header(self, extension):
         draw = ImageDraw.Draw(self.image)
         tb = draw.textbbox((float(0.0), float(0.0)), extension.text, extension.font)
         self.extend(
             0,
-            int(tb[3] + extension.vertical_padding * 2),
+            int(tb[3] + int(extension.vertical_padding) * 2),
             0,
-            int(tb[3] + extension.vertical_padding * 2),
+            int(tb[3] + int(extension.vertical_padding) * 2),
             extension.background_color
         )
         self.add_text(
             extension.text,
-            (self.count_x_position(extension, tb), extension.vertical_padding),
+            (self.count_x_position(extension, tb), int(extension.vertical_padding)),
             extension.font,
             extension.text_color
         )
@@ -116,14 +116,14 @@ class ImageExtender:
         tb = draw.textbbox((float(0.0), float(0.0)), extension.text, extension.font)
         self.extend(
             0,
-            int(tb[3] + extension.vertical_padding * 2),
+            int(tb[3] + int(extension.vertical_padding) * 2),
             0,
             0,
             extension.background_color
         )
         self.add_text(
             extension.text,
-            (self.count_x_position(extension, tb), base_size[1] + extension.vertical_padding),
+            (self.count_x_position(extension, tb), base_size[1] + int(extension.vertical_padding)),
             extension.font,
             extension.text_color
         )

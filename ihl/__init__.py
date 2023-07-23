@@ -51,3 +51,7 @@ def main():
     arguments = parser.parse_args()
     arguments.func(arguments)
 
+
+# TODO: Extender gradient
+# TODO: Extender Config
+# TODO: Extender Path template
