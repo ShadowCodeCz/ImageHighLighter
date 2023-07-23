@@ -9,7 +9,7 @@ from . import print_screen
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Image High Lighter",
+        description="Image High Lighter\nihl ext -i img.jpg -o example.jpg -t TEXT -a center -s 50",
         formatter_class=argparse.RawTextHelpFormatter
     )
 
