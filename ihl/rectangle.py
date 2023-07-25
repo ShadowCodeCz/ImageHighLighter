@@ -3,7 +3,9 @@ import os.path
 import subprocess
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QMimeData
+from PyQt5.QtWidgets import QApplication
+
 
 class Canvas(QtWidgets.QLabel):
 
@@ -14,7 +16,7 @@ class Canvas(QtWidgets.QLabel):
         super().__init__()
 
         pixmap = QtGui.QPixmap(img_path)
-        self.pm = pixmap
+        # self.pm = pixmap
         self.setPixmap(pixmap)
 
         # self.last_x, self.last_y = None, None
@@ -24,10 +26,13 @@ class Canvas(QtWidgets.QLabel):
         self.brush_color.setAlpha(55)
 
         self.begin, self.destination = QtCore.QPoint(), QtCore.QPoint()
+        self.begin_crop, self.destination_crop = QtCore.QPoint(), QtCore.QPoint()
 
         cursor = Qt.CrossCursor
         self.setCursor(cursor)
         self.undos = []
+
+        self.action = None
 
     def rotate_color(self):
         self.color_index = (self.color_index + 1) % len(self.colors)
@@ -45,21 +50,75 @@ class Canvas(QtWidgets.QLabel):
         painter.setPen(pen)
 
         painter.setBrush(QtGui.QBrush(QtGui.QColor(self.brush_color)))
+        return painter
+
+    def crop_painter(self, obj):
+        painter = QtGui.QPainter(obj)
+
+        pen = painter.pen()
+        pen.setWidth(2)
+        pen.setColor(QtGui.QColor('#000000'))
+        pen.setStyle(Qt.DashDotLine)
+        painter.setPen(pen)
+        painter.setBrush(QtGui.QBrush(QtGui.QColor(self.brush_color)))
 
         return painter
 
     def paintEvent(self, event):
-        painter = self.rectangle_painter(self)
+        painter = QtGui.QPainter(self)
         painter.drawPixmap(QtCore.QPoint(), self.pixmap())
 
-        if not self.begin.isNull() and not self.destination.isNull():
+        # if self.action == "crop.finish":
+        #     rect = QtCore.QRect(self.begin_crop, self.destination_crop)
+        #     # self.setPixmap(self.pixmap().copy(rect))
+        #     painter = QtGui.QPainter(self.pixmap().copy(rect))
+        #     print("crop.finish")
+        #     painter.drawPixmap(QtCore.QPoint(), self.pixmap().copy(rect))
+        #     self.action = None
+        # else:
+        #     painter = QtGui.QPainter(self)
+        #     painter.drawPixmap(QtCore.QPoint(), self.pixmap())
+
+        if self.action == "rect" and not self.begin.isNull() and not self.destination.isNull():
+            pen = painter.pen()
+            pen.setWidth(2)
+            pen.setColor(self.pen_color)
+            painter.setPen(pen)
+            painter.setBrush(QtGui.QBrush(QtGui.QColor(self.brush_color)))
+
+            painter.drawPixmap(QtCore.QPoint(), self.pixmap())
             rect = QtCore.QRect(self.begin, self.destination)
+            painter.drawRect(rect.normalized())
+
+        if self.action == "crop" and not self.begin_crop.isNull() and not self.destination_crop.isNull():
+            pen = painter.pen()
+            pen.setWidth(2)
+            pen.setColor(QtGui.QColor('#000000'))
+            pen.setStyle(Qt.DashDotLine)
+            painter.setPen(pen)
+
+            brush_color = QtGui.QColor('#FFFFFF')
+            brush_color.setAlpha(0)
+            # pixmap.fill(QtCore.Qt.transparent)
+
+            painter.setBrush(QtGui.QBrush(brush_color))
+
+            painter.drawPixmap(QtCore.QPoint(), self.pixmap())
+            rect = QtCore.QRect(self.begin_crop, self.destination_crop)
+
             painter.drawRect(rect.normalized())
 
     def mousePressEvent(self, event):
         if event.buttons() & Qt.LeftButton:
             self.begin = event.pos()
             self.destination = self.begin
+            self.action = "rect"
+            self.update()
+
+        if event.buttons() & Qt.MidButton:
+            self.begin_crop = event.pos()
+            self.destination_crop = self.begin_crop
+            self.action = "crop"
             self.update()
 
         if event.buttons() & Qt.RightButton:
@@ -71,21 +130,17 @@ class Canvas(QtWidgets.QLabel):
             self.undos.append(self.pixmap().copy())
 
             painter = self.rectangle_painter(self.pixmap())
-            # https://stackoverflow.com/questions/57017820/how-to-add-a-text-on-imagepython-gui-pyqt5
-            # pen = QPen(Qt.red)
-            # pen.setWidth(2)
-            # qp.setPen(pen)
-            #
-            # font = QFont()
-            # font.setFamily('Times')
-            # font.setBold(True)
-            # font.setPointSize(24)
-            # qp.setFont(font)
             painter.drawText(event.x(), event.y(), text)
 
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.LeftButton:
             self.destination = event.pos()
+            self.action = "rect"
+            self.update()
+
+        if event.buttons() & Qt.MidButton:
+            self.destination_crop = event.pos()
+            self.action = "crop"
             self.update()
 
     def mouseReleaseEvent(self, event):
@@ -98,7 +153,26 @@ class Canvas(QtWidgets.QLabel):
             painter.drawRect(rect.normalized())
 
             self.begin, self.destination = QtCore.QPoint(), QtCore.QPoint()
+            self.action = "rect"
             self.update()
+
+        if event.button() & Qt.MidButton:
+            rect = QtCore.QRect(self.begin_crop, self.destination_crop)
+            # painter = self.crop_painter(self.pixmap().copy(rect))
+
+            self.undos.append(self.pixmap().copy())
+
+            # painter.drawRect(rect.normalized())
+            self.setPixmap(self.pixmap().copy(rect))
+            self.action = "crop.finish"
+
+            #  QImage image("initial_image.jpg");
+            #     QImage copy ;
+            #     copy = image.copy( 0, 0, 128, 128);
+            #     copy.save("cropped_image.jpg");
+
+            self.update()
+            self.begin_crop, self.destination_crop = QtCore.QPoint(), QtCore.QPoint()
 
     def undo(self):
         if len(self.undos) > 0:
@@ -137,6 +211,13 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.canvas.undo()
             if event.key() == Qt.Key_S:
                 self.canvas.save(self.path)
+            if event.key() == Qt.Key_C:
+                clipboard = QApplication.clipboard()
+                data = QMimeData()
+                data.setImageData(self.canvas.pixmap())
+                clipboard.setMimeData(data)
+
+
 
     def closeEvent(self, event):
         if len(self.canvas.undos) > 0:
