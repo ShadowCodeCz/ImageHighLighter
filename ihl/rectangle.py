@@ -33,6 +33,7 @@ class Canvas(QtWidgets.QLabel):
         self.undos = []
 
         self.action = None
+        self.scroll_area = None
 
     def rotate_color(self):
         self.color_index = (self.color_index + 1) % len(self.colors)
@@ -93,12 +94,12 @@ class Canvas(QtWidgets.QLabel):
         if self.action == "crop" and not self.begin_crop.isNull() and not self.destination_crop.isNull():
             pen = painter.pen()
             pen.setWidth(2)
-            pen.setColor(QtGui.QColor('#000000'))
+            pen.setColor(QtGui.QColor('#8A2BE2'))
             pen.setStyle(Qt.DashDotLine)
             painter.setPen(pen)
 
-            brush_color = QtGui.QColor('#FFFFFF')
-            brush_color.setAlpha(0)
+            brush_color = QtGui.QColor('#8A2BE2')
+            brush_color.setAlpha(10)
             # pixmap.fill(QtCore.Qt.transparent)
 
             painter.setBrush(QtGui.QBrush(brush_color))
@@ -173,6 +174,12 @@ class Canvas(QtWidgets.QLabel):
 
             self.update()
             self.begin_crop, self.destination_crop = QtCore.QPoint(), QtCore.QPoint()
+            self.scroll_area.verticalScrollBar().setValue(
+                self.scroll_area.verticalScrollBar().minimum()
+            )
+            self.scroll_area.horizontalScrollBar().setValue(
+                self.scroll_area.horizontalScrollBar().minimum()
+            )
 
     def undo(self):
         if len(self.undos) > 0:
@@ -195,10 +202,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.canvas = Canvas(path)
         # self.setStyleSheet("background-color: black;")
 
-        self.scrollArea = QtWidgets.QScrollArea()
-        self.scrollArea.setBackgroundRole(QtGui.QPalette.Dark)
-        self.scrollArea.setWidget(self.canvas)
-        self.setCentralWidget(self.scrollArea)
+        self.scroll_area = QtWidgets.QScrollArea()
+        self.scroll_area.setBackgroundRole(QtGui.QPalette.Dark)
+        self.scroll_area.setWidget(self.canvas)
+        self.setCentralWidget(self.scroll_area)
+
+        self.canvas.scroll_area = self.scroll_area
 
         self.setWindowTitle(os.path.abspath(path))
 
