@@ -1,15 +1,20 @@
 import argparse
 import logging
 import logging.config
-
+import os
 
 from . import rectangle
 from . import extender
 from . import print_screen
+from . import app_core
 
 def main():
+    ac = app_core.AppCore()
+
+    # ihl ext -i img.jpg -o example.jpg -t TEXT -a center -s 50
+
     parser = argparse.ArgumentParser(
-        description="Image High Lighter\nihl ext -i img.jpg -o example.jpg -t TEXT -a center -s 50",
+        description=f"Image High Lighter\n\n{ac.read_extended_help()}",
         formatter_class=argparse.RawTextHelpFormatter
     )
 
@@ -23,8 +28,8 @@ def main():
     print_screen_parser = subparsers.add_parser('ps')
     print_screen_parser.set_defaults(func=print_screen.run)
     print_screen_parser.add_argument("-o", "--output", default="./print_screens/%Y.%m.%d_%H-%M-%S.png")
-    print_screen_parser.add_argument("-b", "--backup", default=r"C:\Users\sedaj/ihl/backup/full/%Y.%m.%d/%Y.%m.%d_%H-%M-%S.png")
-    print_screen_parser.add_argument("--backup_directory", default=r"C:\Users\sedaj/ihl/backup/original/%Y.%m.%d/")
+    print_screen_parser.add_argument("-b", "--backup", default=os.path.join(ac.app_directory(), r"backup/full/%Y.%m.%d/%Y.%m.%d_%H-%M-%S.png"))
+    print_screen_parser.add_argument("--backup_directory", default=os.path.join(ac.app_directory(), r"backup/original/%Y.%m.%d/"))
     print_screen_parser.add_argument("-r", "--rect", action='store_true')
     print_screen_parser.add_argument("-z", "--rect_minimize", action='store_true')
     print_screen_parser.add_argument("-m", "--monitor", default=2)
@@ -44,14 +49,54 @@ def main():
     extender_parser.add_argument("-v", "--vertical_padding", default=10, help="10")
     extender_parser.add_argument("-n", "--horizontal_padding", default=10, help="10")
 
-    extender_parser = subparsers.add_parser('bect')
-    extender_parser.set_defaults(func=rectangle.run_for_all)
-    extender_parser.add_argument("-z", "--rect_minimize", action='store_true')
+    batch_rect_parser = subparsers.add_parser('bect')
+    batch_rect_parser.set_defaults(func=rectangle.run_for_all)
+    batch_rect_parser.add_argument("-z", "--rect_minimize", action='store_true')
+
+    font_test_parser = subparsers.add_parser('font-test')
+    font_test_parser.set_defaults(func=extender.run_font_test)
+    font_test_parser.add_argument("-i", "--image_path")
+    font_test_parser.add_argument("-d", "--fonts_directory")
 
     arguments = parser.parse_args()
     arguments.func(arguments)
 
+# TODO: logger
 
-# TODO: Extender gradient
-# TODO: Extender Config
-# TODO: Extender Path template
+# TODO: Home directory auto identification
+# from pathlib import Path
+# home = str(Path.home())
+
+# from os.path import expanduser
+# home = expanduser("~")
+
+
+# TODO: Rectangle - CTRL + O
+# TODO: Rectangle - ESC
+# TODO: Rectangle - Nastaveni tloustky cary
+# TODO: Rectangle - Nastaveni alpha pro vypln ctverce
+# TODO: Rectangle - Nastaveni fontu a velikosti
+# TODO: Rectangle - Pamatovani si predchoziho textu
+# TODO: Rectangle - Hezci okno pro text nebo nazornejsi pridavani textu
+# TODO: Rectangle - Funkce prohlizece v adresari sipky
+# TODO: Rectangle - Pridani a odstraneni head / foot
+# TODO: Rectangle - Frameless ui.setWindowFlags(QtCore.Qt.FramelessWindowHint)
+# TODO: Rectangle - Nastrojova a stavova lista
+# TODO: Rectangle - Crop mimo aktualni view
+# TODO: Rectangle - Hezci scrollbary
+# TODO: Rectangle - Hezci background color
+# TODO: Rectangle - Vyrezat vlozit
+# TODO: Rectangle - Vlozit CTRL + V posunout
+# TODO: Aplikace co posloucha Print Screen key press event
+
+# TODO: extender - pridani podle konfigu [] + variables
+# TODO: extender - hromadne zpracovani podle konfigu, na jednom radku left, center, right
+# TODO: extender - gradient
+# TODO: extender - propracovanejsi extended area
+
+# TODO: Idea backup machine - vytvori zip a ulozi na standardni misto
+
+# https://stackoverflow.com/questions/34697559/pil-image-to-qpixmap-conversion-issue
+# from PIL.ImageQt import ImageQt
+# qim = ImageQt(im)
+# pix = QtGui.QPixmap.fromImage(qim)

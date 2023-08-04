@@ -1,6 +1,8 @@
 # https://stackoverflow.com/questions/43295189/extending-a-image-and-adding-text-on-the-extended-area-using-python-pil
 # https://stackoverflow.com/questions/72844672/how-would-i-use-pil-to-extend-an-image-and-then-draw-a-black-rectangle-with-t
 # https://stackoverflow.com/questions/58806198/python-pil-add-text-before-image-on-top-of-image-not-on-the-image
+import glob
+import os.path
 
 # Text size
 # https://stackoverflow.com/questions/43828955/measuring-width-of-text-python-pil
@@ -22,6 +24,56 @@ def hex_to_rgb(hexadecimal_color):
 
     return tuple(rgb)
 
+
+def run_font_test(arguments):
+    template = os.path.join(arguments.fonts_directory, "*.ttf")
+    for font_file in glob.glob(template):
+        print(font_file)
+        try:
+            extension_head = Extension()
+            extension_head.image_path = arguments.image_path
+            extension_head.position = "head"
+            extension_head.text = "Very Nice Title"
+            extension_head.text_align = "center"
+            extension_head.text_color = "#FF0000"
+            extension_head.background_color = "#000000"
+            extension_head.font_path = font_file
+            extension_head.font_size = 70
+            extension_head.vertical_padding = 10
+            extension_head.horizontal_padding = 10
+
+            extension_foot_1 = Extension()
+            extension_foot_1.image_path = arguments.image_path
+            extension_foot_1.position = "foot"
+            extension_foot_1.text = os.path.basename(font_file)
+            extension_foot_1.text_align = "center"
+            extension_foot_1.text_color = "#00FF00"
+            extension_foot_1.background_color = "#000000"
+            extension_foot_1.font_path = font_file
+            extension_foot_1.font_size = 40
+            extension_foot_1.vertical_padding = 10
+            extension_foot_1.horizontal_padding = 10
+
+            extension_foot_2 = Extension()
+            extension_foot_2.image_path = arguments.image_path
+            extension_foot_2.position = "foot"
+            extension_foot_2.text = os.path.abspath(font_file)
+            extension_foot_2.text_align = "center"
+            extension_foot_2.text_color = "#FFFFFF"
+            extension_foot_2.background_color = "#000000"
+            extension_foot_2.font_path = font_file
+            extension_foot_2.font_size = 25
+            extension_foot_2.vertical_padding = 10
+            extension_foot_2.horizontal_padding = 10
+
+            extender = ImageExtender()
+            extender.add_extension(extension_head)
+            extender.add_extension(extension_foot_1)
+            extender.add_extension(extension_foot_2)
+            output = os.path.join(arguments.fonts_directory, os.path.basename(font_file).replace(".ttf", ".png").replace(".TTF", ".png"))
+            extender.save(output)
+        except Exception as e:
+            print(e)
 
 def run(arguments):
     extension = Extension()
@@ -79,7 +131,7 @@ class ImageExtender:
         draw.text(position, text, color, font=font)
 
     def add_extension(self, extension):
-        self.image = Image.open(extension.image_path)
+        self.image = Image.open(extension.image_path) if self.image == None else self.image
         if extension.position == "head":
             self.add_header(extension)
         if extension.position == "foot":
