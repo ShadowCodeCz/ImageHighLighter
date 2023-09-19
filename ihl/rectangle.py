@@ -105,7 +105,7 @@ class Canvas(QtWidgets.QLabel):
 
         if self.action == "crop" and not self.begin_crop.isNull() and not self.destination_crop.isNull():
             pen = painter.pen()
-            pen.setWidth(self.pen_width)
+            pen.setWidth(2)
             pen.setColor(QtGui.QColor('#8A2BE2'))
             pen.setStyle(Qt.DashDotLine)
             painter.setPen(pen)
@@ -269,11 +269,11 @@ class MainWindow(QtWidgets.QMainWindow):
         if event.key() == Qt.Key_Tab:
             self.canvas.rotate_color()
 
-        if event.key() == Qt.Key_Plus:
-            self.canvas.increase_pen_width()
-
-        if event.key() == Qt.Key_Minus:
-            self.canvas.decrease_pen_width()
+        if event.modifiers() & Qt.ShiftModifier:
+            if event.key() == Qt.Key_Plus:
+                self.canvas.increase_font_size()
+            if event.key() == Qt.Key_Minus:
+                self.canvas.decrease_font_size()
 
         if event.modifiers() & Qt.AltModifier:
             if event.key() == Qt.Key_Minus:
@@ -297,14 +297,19 @@ class MainWindow(QtWidgets.QMainWindow):
                 subprocess.Popen(f"ihl rect -p {self.path}")
 
             if event.key() == Qt.Key_Plus:
-                self.canvas.increase_font_size()
+                self.canvas.increase_pen_width()
+
             if event.key() == Qt.Key_Minus:
-                self.canvas.decrease_font_size()
+                self.canvas.decrease_pen_width()
 
         if event.key() == Qt.Key_Escape:
+            self.close_dialog()
             self.close()
 
     def closeEvent(self, event):
+        self.close_dialog()
+
+    def close_dialog(self):
         if len(self.canvas.undos) > 0:
             dlg = QtWidgets.QMessageBox(self)
             dlg.setWindowTitle("UNSAVED CHANGES")
@@ -315,7 +320,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
             if button == QtWidgets.QMessageBox.Yes:
                 self.canvas.save(self.path)
-
 
 def run(arguments):
     app = QtWidgets.QApplication(sys.argv)
