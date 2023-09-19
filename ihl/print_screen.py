@@ -28,9 +28,9 @@ class PrintScreenCommand:
         if arguments.rect:
             cmd = f"ihl rect -p {original_path}"
             if arguments.rect_minimize:
-                subprocess.run(f"{cmd} -z")
+                subprocess.Popen(f"{cmd} -z")
             else:
-                subprocess.run(cmd)
+                subprocess.Popen(cmd)
 
     def parse_variables(self):
         for raw_variable in self.arguments.variables:

@@ -1,9 +1,11 @@
+import ctypes
 import glob
 import os.path
 import subprocess
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QMimeData
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication
 
 
@@ -195,6 +197,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, path):
         super().__init__()
+
+        my_app_id = 'mycompany.myproduct.subproduct.version'  # arbitrary string
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(my_app_id)
+
+        logo_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "resources", 'logo.png')
+        self.setWindowIcon(QIcon(logo_path))
 
         # self.scroll = QtWidgets.QScrollArea()
 
