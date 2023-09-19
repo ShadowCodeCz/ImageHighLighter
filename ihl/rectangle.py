@@ -4,7 +4,7 @@ import os.path
 import subprocess
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt, QMimeData
+from PyQt5.QtCore import Qt, QMimeData, QRectF, QPoint
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication
 
@@ -20,6 +20,7 @@ class Canvas(QtWidgets.QLabel):
         pixmap = QtGui.QPixmap(img_path)
         # self.pm = pixmap
         self.setPixmap(pixmap)
+        self.text = ""
 
         # self.last_x, self.last_y = None, None
 
@@ -128,12 +129,17 @@ class Canvas(QtWidgets.QLabel):
             dlg = QtWidgets.QInputDialog(self)
             dlg.setStyleSheet("background-color: white")
             dlg.setMinimumWidth(250)
-            text, ok = dlg.getText(self, 'Input Dialog', 'Text:')
+            self.text, ok = dlg.getMultiLineText(self, 'Text', 'Text:', self.text)
 
             self.undos.append(self.pixmap().copy())
 
             painter = self.rectangle_painter(self.pixmap())
-            painter.drawText(event.x(), event.y(), text)
+            # painter.drawText(event.x(), event.y(), f"{text}\naaa")
+            # text_rect = QRectF(event.x(), event.y(), self.pixmap().rect().width() - event.y(), self.pixmap().rect().height() - event.x())
+            text_rect = QRectF(QPoint(event.x(), event.y()), QPoint(self.pixmap().rect().width(), self.pixmap().rect().height()))
+            painter.drawText(text_rect, Qt.AlignTop | Qt.AlignLeft, self.text)
+
+
 
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.LeftButton:
@@ -198,7 +204,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, path):
         super().__init__()
 
-        my_app_id = 'mycompany.myproduct.subproduct.version'  # arbitrary string
+        my_app_id = 'shadowcode.ihl.rectangle.02'  # arbitrary string
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(my_app_id)
 
         logo_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), "resources", 'logo.png')
