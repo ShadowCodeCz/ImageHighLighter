@@ -24,6 +24,7 @@ def main():
     rect_parser.set_defaults(func=rectangle.run)
     rect_parser.add_argument("-p", "--path", required=True)
     rect_parser.add_argument("-z", "--minimize", action='store_true')
+    rect_parser.add_argument("-f", "--frameless", action='store_true')
 
     print_screen_parser = subparsers.add_parser('ps')
     print_screen_parser.set_defaults(func=print_screen.run)
@@ -32,6 +33,7 @@ def main():
     print_screen_parser.add_argument("--backup_directory", default=os.path.join(ac.app_directory(), r"backup/original/%Y.%m.%d/"))
     print_screen_parser.add_argument("-r", "--rect", action='store_true')
     print_screen_parser.add_argument("-z", "--rect_minimize", action='store_true')
+    print_screen_parser.add_argument("-f", "--rect_frameless", action='store_true')
     print_screen_parser.add_argument("-m", "--monitor", default=2)
     print_screen_parser.add_argument("-v", "--variables", default=[], nargs='*')
 
@@ -61,22 +63,11 @@ def main():
     arguments = parser.parse_args()
     arguments.func(arguments)
 
-# TODO: logger
-
-# TODO: Home directory auto identification
-# from pathlib import Path
-# home = str(Path.home())
-
-# from os.path import expanduser
-# home = expanduser("~")
-
-
 # TODO: Rectangle - CTRL + O
-# TODO: Rectangle - ESC
+
 # TODO: Rectangle - Nastaveni tloustky cary
 # TODO: Rectangle - Nastaveni alpha pro vypln ctverce
 # TODO: Rectangle - Nastaveni fontu a velikosti
-# TODO: Rectangle - Pamatovani si predchoziho textu
 # TODO: Rectangle - Hezci okno pro text nebo nazornejsi pridavani textu
 # TODO: Rectangle - Funkce prohlizece v adresari sipky
 # TODO: Rectangle - Pridani a odstraneni head / foot
@@ -87,6 +78,7 @@ def main():
 # TODO: Rectangle - Hezci background color
 # TODO: Rectangle - Vyrezat vlozit
 # TODO: Rectangle - Vlozit CTRL + V posunout
+
 # TODO: Aplikace co posloucha Print Screen key press event
 
 # TODO: extender - pridani podle konfigu [] + variables

@@ -5,7 +5,7 @@ import subprocess
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QMimeData, QRectF, QPoint
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QTextOption, QFont
 from PyQt5.QtWidgets import QApplication
 
 
@@ -22,11 +22,15 @@ class Canvas(QtWidgets.QLabel):
         self.setPixmap(pixmap)
         self.text = ""
 
+        self.pen_width = 2
+        self.alpha = 55
+        self.font_size = 10
+
         # self.last_x, self.last_y = None, None
 
         self.pen_color = QtGui.QColor('#FF0000')
         self.brush_color = QtGui.QColor('#FF0000')
-        self.brush_color.setAlpha(55)
+        self.brush_color.setAlpha(self.alpha)
 
         self.begin, self.destination = QtCore.QPoint(), QtCore.QPoint()
         self.begin_crop, self.destination_crop = QtCore.QPoint(), QtCore.QPoint()
@@ -43,13 +47,18 @@ class Canvas(QtWidgets.QLabel):
 
         self.pen_color = QtGui.QColor(self.colors[self.color_index])
         self.brush_color = QtGui.QColor(self.colors[self.color_index])
-        self.brush_color.setAlpha(55)
+        self.brush_color.setAlpha(self.alpha)
+
+    def update_pen_and_brush(self):
+        self.pen_color = QtGui.QColor(self.colors[self.color_index])
+        self.brush_color = QtGui.QColor(self.colors[self.color_index])
+        self.brush_color.setAlpha(self.alpha)
 
     def rectangle_painter(self, obj):
         painter = QtGui.QPainter(obj)
 
         pen = painter.pen()
-        pen.setWidth(2)
+        pen.setWidth(self.pen_width)
         pen.setColor(self.pen_color)
         painter.setPen(pen)
 
@@ -60,7 +69,7 @@ class Canvas(QtWidgets.QLabel):
         painter = QtGui.QPainter(obj)
 
         pen = painter.pen()
-        pen.setWidth(2)
+        pen.setWidth(self.pen_width)
         pen.setColor(QtGui.QColor('#000000'))
         pen.setStyle(Qt.DashDotLine)
         painter.setPen(pen)
@@ -85,7 +94,7 @@ class Canvas(QtWidgets.QLabel):
 
         if self.action == "rect" and not self.begin.isNull() and not self.destination.isNull():
             pen = painter.pen()
-            pen.setWidth(2)
+            pen.setWidth(self.pen_width)
             pen.setColor(self.pen_color)
             painter.setPen(pen)
             painter.setBrush(QtGui.QBrush(QtGui.QColor(self.brush_color)))
@@ -96,7 +105,7 @@ class Canvas(QtWidgets.QLabel):
 
         if self.action == "crop" and not self.begin_crop.isNull() and not self.destination_crop.isNull():
             pen = painter.pen()
-            pen.setWidth(2)
+            pen.setWidth(self.pen_width)
             pen.setColor(QtGui.QColor('#8A2BE2'))
             pen.setStyle(Qt.DashDotLine)
             painter.setPen(pen)
@@ -137,6 +146,7 @@ class Canvas(QtWidgets.QLabel):
             # painter.drawText(event.x(), event.y(), f"{text}\naaa")
             # text_rect = QRectF(event.x(), event.y(), self.pixmap().rect().width() - event.y(), self.pixmap().rect().height() - event.x())
             text_rect = QRectF(QPoint(event.x(), event.y()), QPoint(self.pixmap().rect().width(), self.pixmap().rect().height()))
+            painter.setFont(QFont("Arial", self.font_size))
             painter.drawText(text_rect, Qt.AlignTop | Qt.AlignLeft, self.text)
 
 
@@ -198,6 +208,36 @@ class Canvas(QtWidgets.QLabel):
         self.pixmap().save(os.path.abspath(path))
         self.undos = []
 
+    def increase_pen_width(self):
+        self.pen_width += 1
+        self.update_pen_and_brush()
+
+    def decrease_pen_width(self):
+        self.pen_width -= 1
+        if self.pen_width < 1:
+            self.pen_width = 1
+        self.update_pen_and_brush()
+
+    def increase_font_size(self):
+        self.font_size += 1
+        self.update_pen_and_brush()
+
+    def decrease_font_size(self):
+        self.font_size -= 1
+        if self.font_size < 7:
+            self.font_size = 7
+        self.update_pen_and_brush()
+
+    def increase_alpha(self):
+        self.alpha += 5
+        self.update_pen_and_brush()
+
+    def decrease_alpha(self):
+        self.alpha -= 5
+        if self.alpha < 0:
+            self.alpha = 0
+        self.update_pen_and_brush()
+
 
 class MainWindow(QtWidgets.QMainWindow):
 
@@ -229,6 +269,19 @@ class MainWindow(QtWidgets.QMainWindow):
         if event.key() == Qt.Key_Tab:
             self.canvas.rotate_color()
 
+        if event.key() == Qt.Key_Plus:
+            self.canvas.increase_pen_width()
+
+        if event.key() == Qt.Key_Minus:
+            self.canvas.decrease_pen_width()
+
+        if event.modifiers() & Qt.AltModifier:
+            if event.key() == Qt.Key_Minus:
+                self.canvas.decrease_alpha()
+
+            if event.key() == Qt.Key_Plus:
+                self.canvas.increase_alpha()
+
         if event.modifiers() & Qt.ControlModifier:
             if event.key() == Qt.Key_Z:
                 self.canvas.undo()
@@ -240,7 +293,16 @@ class MainWindow(QtWidgets.QMainWindow):
                 data.setImageData(self.canvas.pixmap())
                 clipboard.setMimeData(data)
 
+            if event.key() == Qt.Key_N:
+                subprocess.Popen(f"ihl rect -p {self.path}")
 
+            if event.key() == Qt.Key_Plus:
+                self.canvas.increase_font_size()
+            if event.key() == Qt.Key_Minus:
+                self.canvas.decrease_font_size()
+
+        if event.key() == Qt.Key_Escape:
+            self.close()
 
     def closeEvent(self, event):
         if len(self.canvas.undos) > 0:
@@ -258,10 +320,14 @@ class MainWindow(QtWidgets.QMainWindow):
 def run(arguments):
     app = QtWidgets.QApplication(sys.argv)
     window = MainWindow(arguments.path)
-    if arguments.minimize:
-        window.showMinimized()
-    else:
+    if arguments.frameless:
+        window.setWindowFlags(Qt.FramelessWindowHint)
         window.showMaximized()
+    else:
+        if arguments.minimize:
+            window.showMinimized()
+        else:
+            window.showMaximized()
     app.exec_()
 
 

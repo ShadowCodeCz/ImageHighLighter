@@ -27,7 +27,9 @@ class PrintScreenCommand:
 
         if arguments.rect:
             cmd = f"ihl rect -p {original_path}"
-            if arguments.rect_minimize:
+            if arguments.rect_frameless:
+                subprocess.Popen(f"{cmd} -f")
+            elif arguments.rect_minimize:
                 subprocess.Popen(f"{cmd} -z")
             else:
                 subprocess.Popen(cmd)
