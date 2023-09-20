@@ -52,6 +52,7 @@ def main():
     ALT + I - increase alpha background color of number rectangle
     ALT + D - decrease alpha background color of number rectangle
     
+    CTRL + O - open new instance of application with selected image
     CTRL + C - copy current image
     CTRL + Z - undo
     

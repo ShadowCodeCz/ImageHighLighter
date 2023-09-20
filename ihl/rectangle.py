@@ -509,8 +509,6 @@ class MainWindow(QtWidgets.QMainWindow):
             # if event.key() == Qt.Key_N:
             #     subprocess.Popen(f"ihl rect -p {self.path}")
 
-
-
             if event.key() == Qt.Key_Plus:
                 self.canvas.increase_pen_width()
 
