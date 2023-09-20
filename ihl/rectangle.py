@@ -6,7 +6,7 @@ import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QMimeData, QRectF, QPoint
 from PyQt5.QtGui import QIcon, QTextOption, QFont
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QFileDialog
 
 
 class Canvas(QtWidgets.QLabel):
@@ -498,8 +498,18 @@ class MainWindow(QtWidgets.QMainWindow):
                 data.setImageData(self.canvas.pixmap())
                 clipboard.setMimeData(data)
 
+            if event.key() == Qt.Key_O:
+                file_path, _ = QFileDialog.getOpenFileName(self,
+                                                        'Open file',
+                                                        os.getcwd(),
+                                                        'Image files (*.jpg *.jpeg *.png *.bmp *.gif)')
+                subprocess.Popen(f"ihl rect -p {file_path}")
+
+            # TODO: N - Next, P - Previous (in current working directory)
             # if event.key() == Qt.Key_N:
             #     subprocess.Popen(f"ihl rect -p {self.path}")
+
+
 
             if event.key() == Qt.Key_Plus:
                 self.canvas.increase_pen_width()
