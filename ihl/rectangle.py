@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import QApplication
 
 class Canvas(QtWidgets.QLabel):
 
-    colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00']
+    colors = ['#FF0000', '#13A613', '#475ECE', '#FFFF00', '#5e5e5e', '#F68757', '#00FF00', '#0000FF', '#C752C7']
     color_index = 0
 
     def __init__(self, img_path):
@@ -22,9 +22,9 @@ class Canvas(QtWidgets.QLabel):
         self.setPixmap(pixmap)
         self.text = ""
 
-        self.pen_width = 2
+        self.pen_width = 1
         self.alpha = 55
-        self.font_size = 10
+        self.font_size = 12
 
         # self.last_x, self.last_y = None, None
 
@@ -33,6 +33,7 @@ class Canvas(QtWidgets.QLabel):
         self.brush_color.setAlpha(self.alpha)
 
         self.begin, self.destination = QtCore.QPoint(), QtCore.QPoint()
+        self.last_begin, self.last_destination = QtCore.QPoint(), QtCore.QPoint()
         self.begin_crop, self.destination_crop = QtCore.QPoint(), QtCore.QPoint()
 
         cursor = Qt.CrossCursor
@@ -41,6 +42,7 @@ class Canvas(QtWidgets.QLabel):
 
         self.action = None
         self.scroll_area = None
+        self.counter = 1
 
     def rotate_color(self):
         self.color_index = (self.color_index + 1) % len(self.colors)
@@ -122,7 +124,7 @@ class Canvas(QtWidgets.QLabel):
             painter.drawRect(rect.normalized())
 
     def mousePressEvent(self, event):
-        if event.buttons() & Qt.LeftButton:
+        if event.buttons() & Qt.LeftButton and event.modifiers() != Qt.ControlModifier:
             self.begin = event.pos()
             self.destination = self.begin
             self.action = "rect"
@@ -149,10 +151,57 @@ class Canvas(QtWidgets.QLabel):
             painter.setFont(QFont("Arial", self.font_size))
             painter.drawText(text_rect, Qt.AlignTop | Qt.AlignLeft, self.text)
 
+    def mouseDoubleClickEvent(self, event):
+        if event.modifiers() & Qt.ControlModifier:
+            # self.undos.append(self.pixmap().copy())
+            #
+            # painter = self.rectangle_painter(self.pixmap())
+            # text_rect = QRectF(event.x(), event.y(), self.font_size * 2, self.font_size * 2)
+            # font = QFont("Arial", self.font_size)
+            # font.setBold(True)
+            # painter.setFont(font)
+            # painter.drawText(text_rect, Qt.AlignCenter, str(self.counter))
+            #
+            # pen = painter.pen()
+            # pen.setWidth(self.pen_width)
+            # pen.setColor(self.pen_color)
+            # painter.setPen(pen)
+            # painter.setBrush(QtGui.QBrush(QtGui.QColor(self.brush_color)))
+            #
+            # painter.drawPixmap(QtCore.QPoint(), self.pixmap())
+            # painter.drawRect(text_rect.normalized())
+            #
+            # self.counter += 1
+            # self.update()
+            text_rect = QRectF(event.x(), event.y(), self.font_size * 2, self.font_size * 2)
+            self.draw_number(text_rect)
+
+
+    def draw_number(self, rect):
+        self.undos.append(self.pixmap().copy())
+
+        painter = self.rectangle_painter(self.pixmap())
+        # text_rect = QRectF(event.x(), event.y(), self.font_size * 2, self.font_size * 2)
+        font = QFont("Arial", self.font_size)
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(rect, Qt.AlignCenter, str(self.counter))
+
+        pen = painter.pen()
+        pen.setWidth(self.pen_width)
+        pen.setColor(self.pen_color)
+        painter.setPen(pen)
+        painter.setBrush(QtGui.QBrush(QtGui.QColor(self.brush_color)))
+
+        painter.drawPixmap(QtCore.QPoint(), self.pixmap())
+        painter.drawRect(rect.normalized())
+
+        self.counter += 1
+        self.update()
 
 
     def mouseMoveEvent(self, event):
-        if event.buttons() & Qt.LeftButton:
+        if event.buttons() & Qt.LeftButton and event.modifiers() != Qt.ControlModifier:
             self.destination = event.pos()
             self.action = "rect"
             self.update()
@@ -163,13 +212,16 @@ class Canvas(QtWidgets.QLabel):
             self.update()
 
     def mouseReleaseEvent(self, event):
-        if event.button() & Qt.LeftButton:
+        if event.button() & Qt.LeftButton and event.modifiers() != Qt.ControlModifier:
             rect = QtCore.QRect(self.begin, self.destination)
             painter = self.rectangle_painter(self.pixmap())
 
             self.undos.append(self.pixmap().copy())
 
             painter.drawRect(rect.normalized())
+
+            self.last_begin = self.begin
+            self.last_destination = self.destination
 
             self.begin, self.destination = QtCore.QPoint(), QtCore.QPoint()
             self.action = "rect"
@@ -238,6 +290,30 @@ class Canvas(QtWidgets.QLabel):
             self.alpha = 0
         self.update_pen_and_brush()
 
+    def draw_number_to_left_top_inside_corner(self):
+        if not self.last_begin.isNull() and not self.last_destination.isNull():
+            last_rect = QtCore.QRect(self.last_begin, self.last_destination)
+            text_rect = QRectF(last_rect.topLeft().x(), last_rect.topLeft().y(), self.font_size * 2, self.font_size * 2)
+            self.draw_number(text_rect)
+
+    def draw_number_to_right_top_inside_corner(self):
+        if not self.last_begin.isNull() and not self.last_destination.isNull():
+            last_rect = QtCore.QRect(self.last_begin, self.last_destination)
+            text_rect = QRectF(last_rect.topLeft().x() + last_rect.width() - self.font_size * 2, last_rect.topLeft().y(), self.font_size * 2, self.font_size * 2)
+            self.draw_number(text_rect)
+
+    def draw_number_to_left_bottom_inside_corner(self):
+        if not self.last_begin.isNull() and not self.last_destination.isNull():
+            last_rect = QtCore.QRect(self.last_begin, self.last_destination)
+            text_rect = QRectF(last_rect.topLeft().x(), last_rect.topLeft().y() + last_rect.height() - self.font_size * 2, self.font_size * 2, self.font_size * 2)
+            self.draw_number(text_rect)
+
+    def draw_number_to_right_bottom_inside_corner(self):
+        if not self.last_begin.isNull() and not self.last_destination.isNull():
+            last_rect = QtCore.QRect(self.last_begin, self.last_destination)
+            text_rect = QRectF(last_rect.topLeft().x() + last_rect.width() - self.font_size * 2, last_rect.topLeft().y() + last_rect.height() - self.font_size * 2, self.font_size * 2, self.font_size * 2)
+            self.draw_number(text_rect)
+
 
 class MainWindow(QtWidgets.QMainWindow):
 
@@ -269,6 +345,12 @@ class MainWindow(QtWidgets.QMainWindow):
         if event.key() == Qt.Key_Tab:
             self.canvas.rotate_color()
 
+        if event.key() == Qt.Key_P:
+            self.canvas.counter += 1
+
+        if event.key() == Qt.Key_M:
+            self.canvas.counter -= 1
+
         if event.modifiers() & Qt.ShiftModifier:
             if event.key() == Qt.Key_Plus:
                 self.canvas.increase_font_size()
@@ -293,14 +375,27 @@ class MainWindow(QtWidgets.QMainWindow):
                 data.setImageData(self.canvas.pixmap())
                 clipboard.setMimeData(data)
 
-            if event.key() == Qt.Key_N:
-                subprocess.Popen(f"ihl rect -p {self.path}")
+            # if event.key() == Qt.Key_N:
+            #     subprocess.Popen(f"ihl rect -p {self.path}")
 
             if event.key() == Qt.Key_Plus:
                 self.canvas.increase_pen_width()
 
             if event.key() == Qt.Key_Minus:
                 self.canvas.decrease_pen_width()
+
+            if event.key() == Qt.Key_7:
+                self.canvas.draw_number_to_left_top_inside_corner()
+
+            if event.key() == Qt.Key_9:
+                self.canvas.draw_number_to_right_top_inside_corner()
+
+            if event.key() == Qt.Key_1:
+                self.canvas.draw_number_to_left_bottom_inside_corner()
+
+            if event.key() == Qt.Key_3:
+                self.canvas.draw_number_to_right_bottom_inside_corner()
+
 
         if event.key() == Qt.Key_Escape:
             self.close_dialog()
