@@ -20,7 +20,43 @@ def main():
 
     subparsers = parser.add_subparsers()
 
-    rect_parser = subparsers.add_parser('rect')
+    rect_parser = subparsers.add_parser('rect', help="""
+    LMB - draw rectangle
+    MMB - crop
+    RMB - add text
+    
+    LMB Double click - add number
+    
+    TAB - change color
+    
+    CTRL + 7 - add number to left top rectangle corner
+    CTRL + 9 - add number to right top rectangle corner
+    CTRL + 1 - add number to left bottom rectangle corner
+    CTRL + 3 - add number to right bottom rectangle corner
+    
+    CTRL + 8 - add note above the rectangle
+    CTRL + 2 - add note below the rectangle
+    
+    CTRL + Plus - increase size of rectangle border line
+    CTRL + Minus - decrease size of rectangle border line
+    
+    ALT + Plus - increase alpha of rectangle background color
+    ALT + Minus - - decrease alpha of rectangle background color
+    
+    SHIFT + Plus - increase font size
+    SHIFT + Minus - decrease font size
+    
+    P - increase the number counter
+    M - decrease the number counter
+    
+    ALT + I - increase alpha background color of number rectangle
+    ALT + D - decrease alpha background color of number rectangle
+    
+    CTRL + C - copy current image
+    CTRL + Z - undo
+    
+    ESC - close the application
+    """)
     rect_parser.set_defaults(func=rectangle.run)
     rect_parser.add_argument("-p", "--path", required=True)
     rect_parser.add_argument("-z", "--minimize", action='store_true')

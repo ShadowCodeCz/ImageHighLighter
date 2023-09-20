@@ -24,6 +24,7 @@ class Canvas(QtWidgets.QLabel):
 
         self.pen_width = 1
         self.alpha = 55
+        self.number_alpha_modifier = 50
         self.font_size = 12
 
         # self.last_x, self.last_y = None, None
@@ -43,6 +44,7 @@ class Canvas(QtWidgets.QLabel):
         self.action = None
         self.scroll_area = None
         self.counter = 1
+        self.note_text = ""
 
     def rotate_color(self):
         self.color_index = (self.color_index + 1) % len(self.colors)
@@ -193,7 +195,12 @@ class Canvas(QtWidgets.QLabel):
         painter.setPen(pen)
         painter.setBrush(QtGui.QBrush(QtGui.QColor(self.brush_color)))
 
-        painter.drawPixmap(QtCore.QPoint(), self.pixmap())
+        # painter.drawPixmap(QtCore.QPoint(), self.pixmap())
+        color = painter.brush().color()
+        color.setAlpha(self.alpha + self.number_alpha_modifier)
+        brush = QtGui.QBrush(QtGui.QColor(color))
+        painter.setBrush(brush)
+
         painter.drawRect(rect.normalized())
 
         self.counter += 1
@@ -290,6 +297,16 @@ class Canvas(QtWidgets.QLabel):
             self.alpha = 0
         self.update_pen_and_brush()
 
+    def increase_number_alpha_modifier(self):
+        self.number_alpha_modifier += 5
+        self.update_pen_and_brush()
+
+    def decrease_number_alpha_modifier(self):
+        self.number_alpha_modifier -= 5
+        if self.number_alpha_modifier < 0:
+            self.number_alpha_modifier = 0
+        self.update_pen_and_brush()
+
     def draw_number_to_left_top_inside_corner(self):
         if not self.last_begin.isNull() and not self.last_destination.isNull():
             last_rect = QtCore.QRect(self.last_begin, self.last_destination)
@@ -311,8 +328,108 @@ class Canvas(QtWidgets.QLabel):
     def draw_number_to_right_bottom_inside_corner(self):
         if not self.last_begin.isNull() and not self.last_destination.isNull():
             last_rect = QtCore.QRect(self.last_begin, self.last_destination)
-            text_rect = QRectF(last_rect.topLeft().x() + last_rect.width() - self.font_size * 2, last_rect.topLeft().y() + last_rect.height() - self.font_size * 2, self.font_size * 2, self.font_size * 2)
+            text_rect = QRectF(
+                last_rect.topLeft().x() + last_rect.width() - self.font_size * 2,
+                last_rect.topLeft().y() + last_rect.height() - self.font_size * 2,
+                self.font_size * 2,
+                self.font_size * 2)
             self.draw_number(text_rect)
+
+    def draw_top_note(self):
+        dlg = QtWidgets.QInputDialog(self)
+        dlg.setStyleSheet("background-color: white")
+        dlg.setMinimumWidth(250)
+        self.note_text, ok = dlg.getMultiLineText(self, 'Text', 'Text:', self.note_text)
+
+        text = self.note_text.strip()
+        lines = text.count("\n") + 1
+        self.undos.append(self.pixmap().copy())
+
+        painter = self.rectangle_painter(self.pixmap())
+
+        pen = painter.pen()
+        pen.setWidth(self.pen_width)
+        pen.setColor(self.pen_color)
+        painter.setPen(pen)
+
+        color = QtGui.QColor(self.brush_color)
+        color.setAlpha(210)
+        brush = QtGui.QBrush(QtGui.QColor(color))
+        painter.setBrush(brush)
+
+        last_rect = QtCore.QRect(self.last_begin, self.last_destination)
+        rect = QRectF(
+            last_rect.topLeft().x(),
+            last_rect.topLeft().y() - (self.font_size * 2 * lines),
+            last_rect.width(),
+            self.font_size * 2 * lines
+        )
+        painter.drawRect(rect.normalized())
+
+        font = QFont("Arial", self.font_size)
+        font.setBold(True)
+        painter.setFont(font)
+
+        pen = painter.pen()
+        pen.setWidth(self.pen_width)
+        pen.setColor(QtGui.QColor('#000000'))
+        painter.setPen(pen)
+
+        color = QtGui.QColor(self.brush_color)
+        brush = QtGui.QBrush(QtGui.QColor(color))
+        painter.setBrush(brush)
+
+        painter.drawText(rect.normalized(), Qt.AlignCenter | Qt.AlignHCenter | Qt.AlignVCenter, text)
+
+        self.update()
+
+    def draw_bottom_note(self):
+        dlg = QtWidgets.QInputDialog(self)
+        dlg.setStyleSheet("background-color: white")
+        dlg.setMinimumWidth(250)
+        self.note_text, ok = dlg.getMultiLineText(self, 'Text', 'Text:', self.note_text)
+
+        text = self.note_text.strip()
+        lines = text.count("\n") + 1
+        self.undos.append(self.pixmap().copy())
+
+        painter = self.rectangle_painter(self.pixmap())
+
+        pen = painter.pen()
+        pen.setWidth(self.pen_width)
+        pen.setColor(self.pen_color)
+        painter.setPen(pen)
+
+        color = QtGui.QColor(self.brush_color)
+        color.setAlpha(210)
+        brush = QtGui.QBrush(QtGui.QColor(color))
+        painter.setBrush(brush)
+
+        last_rect = QtCore.QRect(self.last_begin, self.last_destination)
+        rect = QRectF(
+            last_rect.bottomLeft().x(),
+            last_rect.bottomLeft().y(),
+            last_rect.width(),
+            self.font_size * 2 * lines
+        )
+        painter.drawRect(rect.normalized())
+
+        font = QFont("Arial", self.font_size)
+        font.setBold(True)
+        painter.setFont(font)
+
+        pen = painter.pen()
+        pen.setWidth(self.pen_width)
+        pen.setColor(QtGui.QColor('#000000'))
+        painter.setPen(pen)
+
+        color = QtGui.QColor(self.brush_color)
+        brush = QtGui.QBrush(QtGui.QColor(color))
+        painter.setBrush(brush)
+
+        painter.drawText(rect.normalized(), Qt.AlignCenter | Qt.AlignHCenter | Qt.AlignVCenter, text)
+
+        self.update()
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -364,6 +481,12 @@ class MainWindow(QtWidgets.QMainWindow):
             if event.key() == Qt.Key_Plus:
                 self.canvas.increase_alpha()
 
+            if event.key() == Qt.Key_I:
+                self.canvas.increase_number_alpha_modifier()
+
+            if event.key() == Qt.Key_D:
+                self.canvas.decrease_number_alpha_modifier()
+
         if event.modifiers() & Qt.ControlModifier:
             if event.key() == Qt.Key_Z:
                 self.canvas.undo()
@@ -396,6 +519,11 @@ class MainWindow(QtWidgets.QMainWindow):
             if event.key() == Qt.Key_3:
                 self.canvas.draw_number_to_right_bottom_inside_corner()
 
+            if event.key() == Qt.Key_8:
+                self.canvas.draw_top_note()
+
+            if event.key() == Qt.Key_2:
+                self.canvas.draw_bottom_note()
 
         if event.key() == Qt.Key_Escape:
             self.close_dialog()
