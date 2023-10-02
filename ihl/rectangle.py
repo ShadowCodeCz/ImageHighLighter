@@ -175,7 +175,7 @@ class Canvas(QtWidgets.QLabel):
             #
             # self.counter += 1
             # self.update()
-            text_rect = QRectF(event.x(), event.y(), self.font_size * 2, self.font_size * 2)
+            text_rect = QRectF(event.x() - self.font_size, event.y() - self.font_size, self.font_size * 2, self.font_size * 2)
             self.draw_number(text_rect)
 
 

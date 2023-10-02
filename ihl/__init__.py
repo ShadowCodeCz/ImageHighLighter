@@ -116,6 +116,11 @@ def main():
 # TODO: Rectangle - Vyrezat vlozit
 # TODO: Rectangle - Vlozit CTRL + V posunout
 
+# TODO: Cislo v kruhu (ALT + double click LMB)
+# TODO: Vkladani popisu k cislum do paticky obrazku (jeden radek == jeden popis NEBO napocitat kolik se toho vejde na radek)
+
+# TODO: NEJDULEZITESJSI JE REFAKTOR A PRIDANI STAVOVE LISTY
+
 # TODO: Aplikace co posloucha Print Screen key press event
 
 # TODO: extender - pridani podle konfigu [] + variables
