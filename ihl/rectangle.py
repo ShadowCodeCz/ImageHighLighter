@@ -1,13 +1,15 @@
+import math
 import ctypes
 import glob
 import os.path
 import subprocess
 import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt, QMimeData, QRectF, QPoint
-from PyQt5.QtGui import QIcon, QTextOption, QFont
-from PyQt5.QtWidgets import QApplication, QFileDialog
+from PyQt5.QtCore import Qt, QMimeData, QRectF, QPoint, QSizeF
+from PyQt5.QtGui import QIcon, QTextOption, QFont, QFontMetricsF
+from PyQt5.QtWidgets import QApplication, QFileDialog, QStatusBar, QFontDialog
 
+import qdarktheme
 
 class Canvas(QtWidgets.QLabel):
 
@@ -24,8 +26,12 @@ class Canvas(QtWidgets.QLabel):
 
         self.pen_width = 1
         self.alpha = 55
-        self.number_alpha_modifier = 50
+        self.number_alpha_modifier = 90
+        self.text_alpha_modifier = 150
         self.font_size = 12
+
+        self.font = QFont("Arial", self.font_size)
+        self.font.setBold(False)
 
         # self.last_x, self.last_y = None, None
 
@@ -40,11 +46,13 @@ class Canvas(QtWidgets.QLabel):
         cursor = Qt.CrossCursor
         self.setCursor(cursor)
         self.undos = []
+        self.rects = []
 
         self.action = None
         self.scroll_area = None
         self.counter = 1
         self.note_text = ""
+        self.full_comment_border = True
 
     def rotate_color(self):
         self.color_index = (self.color_index + 1) % len(self.colors)
@@ -140,7 +148,7 @@ class Canvas(QtWidgets.QLabel):
 
         if event.buttons() & Qt.RightButton:
             dlg = QtWidgets.QInputDialog(self)
-            dlg.setStyleSheet("background-color: white")
+            # dlg.setStyleSheet("background-color: white")
             dlg.setMinimumWidth(250)
             self.text, ok = dlg.getMultiLineText(self, 'Text', 'Text:', self.text)
 
@@ -149,9 +157,70 @@ class Canvas(QtWidgets.QLabel):
             painter = self.rectangle_painter(self.pixmap())
             # painter.drawText(event.x(), event.y(), f"{text}\naaa")
             # text_rect = QRectF(event.x(), event.y(), self.pixmap().rect().width() - event.y(), self.pixmap().rect().height() - event.x())
-            text_rect = QRectF(QPoint(event.x(), event.y()), QPoint(self.pixmap().rect().width(), self.pixmap().rect().height()))
-            painter.setFont(QFont("Arial", self.font_size))
-            painter.drawText(text_rect, Qt.AlignTop | Qt.AlignLeft, self.text)
+
+
+            # text_rect = QRectF(QPoint(event.x(), event.y()), QPoint(self.pixmap().rect().width(), self.pixmap().rect().height()))
+
+            font = self.get_font()
+            rows = self.text.split("\n")
+            longest_rows = max(rows, key=lambda r: len(r))
+            bounding_text_rect = QFontMetricsF(font).boundingRect(longest_rows)
+            lines = self.text.count("\n") + 1
+            modifier = 10
+            full_rect = QRectF(QPoint(event.x() - modifier, event.y() - modifier),
+                               QPoint(int(event.x() + bounding_text_rect.width() + modifier), int(event.y() + bounding_text_rect.height() * lines + modifier))
+                               )
+
+            text_rect = QRectF(QPoint(int(full_rect.x() + modifier), int(full_rect.y() + modifier)),
+                               QSizeF(full_rect.width(), full_rect.height()))
+
+            # painter = self.rectangle_painter(self.pixmap())
+
+            pen = painter.pen()
+            pen.setWidth(self.pen_width)
+            pen.setColor(self.pen_color)
+            painter.setPen(pen)
+
+            color = QtGui.QColor(self.brush_color)
+            color.setAlpha(190)
+            brush = QtGui.QBrush(QtGui.QColor(color))
+            painter.setBrush(brush)
+            painter.drawRect(full_rect)
+
+            # font.setBold(True)
+            painter.setFont(font)
+
+            pen = painter.pen()
+            pen.setWidth(self.pen_width)
+            pen.setColor(QtGui.QColor('#000000'))
+            painter.setPen(pen)
+
+            color = QtGui.QColor(self.brush_color)
+            brush = QtGui.QBrush(QtGui.QColor(color))
+            painter.setBrush(brush)
+
+            if self.text.strip() != "":
+                painter.drawText(text_rect, Qt.AlignTop | Qt.AlignLeft, self.text)
+                self.rects.append(full_rect)
+
+            # color = painter.brush().color()
+            # color.setAlpha(self.alpha + self.text_alpha_modifier)
+            # brush = QtGui.QBrush(QtGui.QColor(color))
+            # painter.setBrush(brush)
+            #
+            # pen = painter.pen()
+            # pen.setWidth(self.pen_width)
+            # pen.setColor(QtGui.QColor("#000000"))
+            # painter.setPen(pen)
+            #
+            # painter.drawRect(full_rect)
+            #
+            # painter.setFont(font)
+            #
+            # text_rect = QRectF(QPoint(int(full_rect.x() + modifier), int(full_rect.y() + modifier)),
+            #                    QSizeF(full_rect.width(), full_rect.height()))
+            # painter.drawText(text_rect, Qt.AlignTop | Qt.AlignLeft, self.text)
+
 
     def mouseDoubleClickEvent(self, event):
         if event.modifiers() & Qt.ControlModifier:
@@ -184,7 +253,7 @@ class Canvas(QtWidgets.QLabel):
 
         painter = self.rectangle_painter(self.pixmap())
         # text_rect = QRectF(event.x(), event.y(), self.font_size * 2, self.font_size * 2)
-        font = QFont("Arial", self.font_size)
+        font = self.get_font()
         font.setBold(True)
         painter.setFont(font)
         painter.drawText(rect, Qt.AlignCenter, str(self.counter))
@@ -205,6 +274,7 @@ class Canvas(QtWidgets.QLabel):
 
         self.counter += 1
         self.update()
+        self.rects.append(rect)
 
 
     def mouseMoveEvent(self, event):
@@ -226,6 +296,8 @@ class Canvas(QtWidgets.QLabel):
             self.undos.append(self.pixmap().copy())
 
             painter.drawRect(rect.normalized())
+            rect_fixed = QtCore.QRect(self.begin, QPoint(self.destination.x() + 1, self.destination.y() + 1))
+            self.rects.append(rect_fixed)
 
             self.last_begin = self.begin
             self.last_destination = self.destination
@@ -337,7 +409,7 @@ class Canvas(QtWidgets.QLabel):
 
     def draw_top_note(self):
         dlg = QtWidgets.QInputDialog(self)
-        dlg.setStyleSheet("background-color: white")
+        # dlg.setStyleSheet("background-color: white")
         dlg.setMinimumWidth(250)
         self.note_text, ok = dlg.getMultiLineText(self, 'Text', 'Text:', self.note_text)
 
@@ -366,7 +438,7 @@ class Canvas(QtWidgets.QLabel):
         )
         painter.drawRect(rect.normalized())
 
-        font = QFont("Arial", self.font_size)
+        font = self.get_font()
         font.setBold(True)
         painter.setFont(font)
 
@@ -385,7 +457,7 @@ class Canvas(QtWidgets.QLabel):
 
     def draw_bottom_note(self):
         dlg = QtWidgets.QInputDialog(self)
-        dlg.setStyleSheet("background-color: white")
+        # dlg.setStyleSheet("background-color: white")
         dlg.setMinimumWidth(250)
         self.note_text, ok = dlg.getMultiLineText(self, 'Text', 'Text:', self.note_text)
 
@@ -414,7 +486,7 @@ class Canvas(QtWidgets.QLabel):
         )
         painter.drawRect(rect.normalized())
 
-        font = QFont("Arial", self.font_size)
+        font = self.get_font()
         font.setBold(True)
         painter.setFont(font)
 
@@ -430,6 +502,275 @@ class Canvas(QtWidgets.QLabel):
         painter.drawText(rect.normalized(), Qt.AlignCenter | Qt.AlignHCenter | Qt.AlignVCenter, text)
 
         self.update()
+
+    def connect_two_last_rects(self):
+        if (len(self.rects) >= 2 ):
+            self.undos.append(self.pixmap().copy())
+            # print("connect")
+            r1 = self.rects[-1]
+            r2 = self.rects[-2]
+            painter = self.rectangle_painter(self.pixmap())
+            painter.setRenderHints(painter.Antialiasing)
+            painter.drawLine(*self.closest_corners(r1, r2))
+            self.update()
+
+    def connect_two_last_rects_by_direct_lines(self):
+        if (len(self.rects) >= 2 ):
+            self.undos.append(self.pixmap().copy())
+            # print("connect")
+            r1 = self.rects[-1]
+            r2 = self.rects[-2]
+
+            painter = self.rectangle_painter(self.pixmap())
+            # painter.setRenderHints(painter.Antialiasing)
+
+            closest_corners = self.closest_corners(r1, r2)
+            cc1 = closest_corners[0]
+            cc2 = closest_corners[1]
+            painter.drawLine(cc1, QPoint(int(cc2.x()), int(cc1.y())))
+            painter.drawLine(cc2, QPoint(int(cc2.x()), int(cc1.y())))
+
+            self.update()
+
+    def connect_two_last_mid_rects_by_direct_lines(self):
+        if (len(self.rects) >= 2 ):
+            self.undos.append(self.pixmap().copy())
+            # print("connect")
+            r1 = self.rects[-1]
+            r2 = self.rects[-2]
+
+            r1_mid_points = self.mid_points_of_rectangle(r1)
+            r2_mid_points = self.mid_points_of_rectangle(r2)
+
+            painter = self.rectangle_painter(self.pixmap())
+            painter.setRenderHints(painter.Antialiasing)
+
+            closest_corners = self.closest_points(r1_mid_points, r2_mid_points)
+
+            cc1 = closest_corners[0]
+            cc2 = closest_corners[1]
+
+            painter.drawLine(cc1, QPoint(int(cc2.x()), int(cc1.y())))
+            painter.drawLine(cc2, QPoint(int(cc2.x()), int(cc1.y())))
+
+            self.update()
+
+    def connect_two_last_mid_2_rects_by_direct_lines(self):
+        if (len(self.rects) >= 2 ):
+            self.undos.append(self.pixmap().copy())
+            # print("connect")
+            r1 = self.rects[-1]
+            r2 = self.rects[-2]
+
+            r1_mid_points = self.mid_points_of_rectangle(r1)
+            r2_mid_points = self.mid_points_of_rectangle(r2)
+
+            painter = self.rectangle_painter(self.pixmap())
+            painter.setRenderHints(painter.Antialiasing)
+
+            closest_corners = self.closest_points(r1_mid_points, r2_mid_points)
+
+            cc1 = closest_corners[0]
+            cc2 = closest_corners[1]
+
+            if cc1.x() > cc2.x():
+                cc1, cc2 = cc2, cc1
+
+            x_diff = cc2.x() - cc1.x()
+            x_diff_half = int(x_diff // 2)
+            painter.drawLine(cc1, QPoint(int(cc1.x() + x_diff_half), int(cc1.y())))
+            painter.drawLine(QPoint(int(cc1.x() + x_diff_half), int(cc1.y())), QPoint(int(cc2.x() - x_diff_half), int(cc2.y())))
+            painter.drawLine(cc2, QPoint(int(cc2.x() - x_diff_half), int(cc2.y())))
+
+            self.update()
+
+    def closest_corners(self, r1: QRectF, r2: QRectF):
+        min = []
+        min_dist = 1000000
+
+        r1_corners = [r1.topLeft(), r1.topRight(), r1.bottomLeft(), r1.bottomRight()]
+        r2_corners = [r2.topLeft(), r2.topRight(), r2.bottomLeft(), r2.bottomRight()]
+
+        for r1c in r1_corners:
+            for r2c in r2_corners:
+                distance = self.two_points_distance(r1c, r2c)
+                if distance < min_dist:
+                    min_dist = distance
+                    min = [r1c, r2c]
+
+        return min
+
+    def closest_points(self, points_left, points_right):
+        min = []
+        min_dist = 1000000
+        for r1c in points_left:
+            for r2c in points_right:
+                distance = self.two_points_distance(r1c, r2c)
+                if distance < min_dist:
+                    min_dist = distance
+                    min = [r1c, r2c]
+
+        return min
+
+    def mid_points_of_rectangle(self, rect):
+        top_center = QPoint(int((rect.topLeft().x() + rect.topRight().x()) // 2), int(rect.topLeft().y()))
+        bottom_center = QPoint(int((rect.bottomLeft().x() + rect.bottomRight().x()) // 2), int(rect.bottomLeft().y()))
+        left_center = QPoint(int(rect.topLeft().x()), int((rect.topLeft().y() + rect.bottomLeft().y()) // 2))
+        right_center = QPoint(int(rect.topRight().x()), int((rect.topRight().y() + rect.bottomRight().y()) // 2))
+
+        return [top_center, bottom_center, left_center, right_center]
+
+    # def have_closest_corners_same_coordinate(self, closest_corners):
+    #     if closest_corners[0].x()
+
+    def two_points_distance(self, p1, p2):
+        return int(math.sqrt((p2.x() - p1.x())**2 + (p2.y() - p1.y())**2))
+
+
+    def extend(self):
+        self.undos.append(self.pixmap().copy())
+        new_pixmap = QtGui.QPixmap(self.pixmap().width() + 80, self.pixmap().height() + 80)
+        new_pixmap.fill(Qt.black)
+
+        painter = QtGui.QPainter(new_pixmap)
+        painter.drawPixmap(40, 40, self.pixmap())
+
+        # self.pm = pixmap
+        self.setPixmap(new_pixmap)
+        painter.end()
+        self.update()
+
+    def extend_top(self, height):
+        self.undos.append(self.pixmap().copy())
+        new_pixmap = QtGui.QPixmap(self.pixmap().width(), self.pixmap().height() + height)
+        new_pixmap.fill(Qt.black)
+
+        painter = QtGui.QPainter(new_pixmap)
+        painter.drawPixmap(0, height, self.pixmap())
+
+        # self.pm = pixmap
+        self.setPixmap(new_pixmap)
+        painter.end()
+        self.update()
+
+    def extend_bottom(self, height):
+        self.undos.append(self.pixmap().copy())
+        new_pixmap = QtGui.QPixmap(self.pixmap().width(), self.pixmap().height() + height)
+        new_pixmap.fill(Qt.black)
+
+        painter = QtGui.QPainter(new_pixmap)
+        painter.drawPixmap(0, 0, self.pixmap())
+
+        # self.pm = pixmap
+        self.setPixmap(new_pixmap)
+        painter.end()
+        self.update()
+
+    def getText(self):
+        dlg = QtWidgets.QInputDialog(self)
+        # dlg.setStyleSheet("background-color: white")
+        dlg.setMinimumWidth(250)
+        self.text, ok = dlg.getMultiLineText(self, 'Text', 'Text:', self.text)
+
+    def add_full_top_comment(self):
+        self.undos.append(self.pixmap().copy())
+        self.getText()
+        self.text = self.text.strip()
+
+        font_size = self.font_size + 10
+        height = int((self.text.count("\n") + 1) * 1.5 * font_size)
+        self.extend_top(height)
+
+        rect = QRectF(QPoint(0, 0), QSizeF(self.pixmap().width() - 1, height - 1))
+
+        painter = self.rectangle_painter(self.pixmap())
+        pen = painter.pen()
+        pen.setWidth(self.pen_width)
+        pen.setColor(self.pen_color)
+        painter.setPen(pen)
+
+        color = QtGui.QColor(self.brush_color)
+        color.setAlpha(105)
+        brush = QtGui.QBrush(Qt.black)
+        # brush = QtGui.QBrush(QtGui.QColor(color))
+        painter.setBrush(brush)
+        if self.full_comment_border:
+            painter.drawRect(rect)
+
+        font = self.get_font()
+        font.setBold(True)
+        painter.setFont(font)
+
+        pen = painter.pen()
+        pen.setWidth(self.pen_width)
+        # pen.setColor(QtGui.QColor('#000000'))
+        painter.setPen(pen)
+
+        color = QtGui.QColor(self.brush_color)
+        brush = QtGui.QBrush(QtGui.QColor(color))
+        painter.setBrush(brush)
+
+        if self.text.strip() != "":
+            painter.drawText(rect, Qt.AlignCenter | Qt.AlignHCenter | Qt.AlignVCenter, self.text)
+        painter.end()
+        self.update()
+
+    def add_full_bottom_comment(self):
+        self.undos.append(self.pixmap().copy())
+        self.getText()
+        self.text = self.text.strip()
+        pixmap_height = self.pixmap().height()
+        height = (self.text.count("\n") + 1) * 2 * self.font_size
+        print(height)
+        self.extend_bottom(height)
+
+        rect = QRectF(QPoint(0, pixmap_height), QSizeF(self.pixmap().width(), height))
+
+        painter = self.rectangle_painter(self.pixmap())
+        pen = painter.pen()
+        pen.setWidth(self.pen_width)
+        pen.setColor(self.pen_color)
+        painter.setPen(pen)
+
+        color = QtGui.QColor(self.brush_color)
+        color.setAlpha(90)
+        # brush = QtGui.QBrush(QtGui.QColor(color))
+        brush = QtGui.QBrush(QtGui.QColor(Qt.black))
+        painter.setBrush(brush)
+        # painter.drawRect(rect)
+
+        font = self.get_font()
+        font.setBold(False)
+        painter.setFont(font)
+
+        pen = painter.pen()
+        pen.setWidth(self.pen_width)
+        pen.setColor(QtGui.QColor(self.pen_color))
+        painter.setPen(pen)
+
+        color = QtGui.QColor(self.brush_color)
+        brush = QtGui.QBrush(QtGui.QColor(color))
+        painter.setBrush(brush)
+
+        if self.text.strip() != "":
+            painter.drawText(rect, Qt.AlignCenter | Qt.AlignHCenter | Qt.AlignVCenter, self.text)
+        painter.end()
+        self.update()
+
+    def get_font(self):
+        self.font.setPointSize(self.font_size)
+        return self.font
+
+    def font_dialog(self):
+        font = self.get_font()
+        font, ok = QFontDialog.getFont(font)
+
+        if ok:
+            self.font = font
+            self.font_size = font.pointSize()
+
+    def switch_full_comment_board(self):
+        self.full_comment_border = not self.full_comment_border
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -456,17 +797,48 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.canvas.scroll_area = self.scroll_area
 
+        self.statusBar = QStatusBar()
+        self.setStatusBar(self.statusBar)
+        self.updateStatusBar()
         self.setWindowTitle(os.path.abspath(path))
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Tab:
             self.canvas.rotate_color()
+            self.setWindowTitle(f"{os.path.abspath(self.path)} [{self.canvas.color_index}]")
+
+        if event.key() == Qt.Key_X:
+            self.canvas.connect_two_last_rects()
+
+        if event.key() == Qt.Key_Y:
+            self.canvas.connect_two_last_rects_by_direct_lines()
+
+        if event.key() == Qt.Key_Q:
+            self.canvas.connect_two_last_mid_rects_by_direct_lines()
+
+        if event.key() == Qt.Key_W:
+            self.canvas.connect_two_last_mid_2_rects_by_direct_lines()
+
+        if event.key() == Qt.Key_E:
+            self.canvas.extend()
+
+        if event.key() == Qt.Key_T:
+            self.canvas.add_full_top_comment()
+
+        if event.key() == Qt.Key_B:
+            self.canvas.add_full_bottom_comment()
+
+        if event.key() == Qt.Key_F:
+            self.canvas.font_dialog()
 
         if event.key() == Qt.Key_P:
             self.canvas.counter += 1
 
         if event.key() == Qt.Key_M:
             self.canvas.counter -= 1
+
+        if event.key() == Qt.Key_R:
+            self.canvas.switch_full_comment_board()
 
         if event.modifiers() & Qt.ShiftModifier:
             if event.key() == Qt.Key_Plus:
@@ -533,9 +905,17 @@ class MainWindow(QtWidgets.QMainWindow):
             if event.key() == Qt.Key_2:
                 self.canvas.draw_bottom_note()
 
+        self.updateStatusBar()
+
         if event.key() == Qt.Key_Escape:
             self.close_dialog()
             self.close()
+
+
+    def updateStatusBar(self):
+        m = f"color: {self.canvas.color_index} [TAB], font.size: {self.canvas.font_size} [SHIFT +, SHIFT -], pen.width: {self.canvas.pen_width} [CTRL +, CTRL -], alpha: {self.canvas.alpha} [ALT +, ALT -], text.alpha.modifier: {self.canvas.text_alpha_modifier}, number.alpha.modifier: {self.canvas.number_alpha_modifier} [ALT I, ALT D], counter: {self.canvas.counter} [P, M], undos: {len(self.canvas.undos)}, border {self.canvas.full_comment_border},  [CTRL Z], extend [E], top.comment [T], top.comment.board [R], bottom.comment [B], connect [x, y, q, w], font [F], open [CTRL O]"
+        self.statusBar.showMessage(m)
+
 
     def closeEvent(self, event):
         self.close_dialog()
@@ -545,7 +925,7 @@ class MainWindow(QtWidgets.QMainWindow):
             dlg = QtWidgets.QMessageBox(self)
             dlg.setWindowTitle("UNSAVED CHANGES")
             dlg.setText("Do you want save changes?")
-            dlg.setStyleSheet("background-color: white")
+            # dlg.setStyleSheet("background-color: white")
             dlg.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
             button = dlg.exec()
 
@@ -554,6 +934,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 def run(arguments):
     app = QtWidgets.QApplication(sys.argv)
+    qdarktheme.setup_theme()
     window = MainWindow(arguments.path)
     if arguments.frameless:
         window.setWindowFlags(Qt.FramelessWindowHint)

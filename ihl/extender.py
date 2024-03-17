@@ -33,10 +33,10 @@ def run_font_test(arguments):
             extension_head = Extension()
             extension_head.image_path = arguments.image_path
             extension_head.position = "head"
-            extension_head.text = "Very Nice Title"
+            extension_head.text = arguments.text
             extension_head.text_align = "center"
-            extension_head.text_color = "#FF0000"
-            extension_head.background_color = "#000000"
+            extension_head.text_color = arguments.text_color
+            extension_head.background_color = arguments.background_color
             extension_head.font_path = font_file
             extension_head.font_size = 70
             extension_head.vertical_padding = 10

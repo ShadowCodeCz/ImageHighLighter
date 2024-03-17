@@ -41,7 +41,7 @@ def main():
     CTRL + Minus - decrease size of rectangle border line
     
     ALT + Plus - increase alpha of rectangle background color
-    ALT + Minus - - decrease alpha of rectangle background color
+    ALT + Minus - decrease alpha of rectangle background color
     
     SHIFT + Plus - increase font size
     SHIFT + Minus - decrease font size
@@ -56,6 +56,13 @@ def main():
     CTRL + C - copy current image
     CTRL + Z - undo
     
+    C - connect two last rectangles
+    E - extend image by black area 
+    
+    T - Top comment
+    R - Switch on/off board of top comment
+    B - Bottom comment
+        
     ESC - close the application
     """)
     rect_parser.set_defaults(func=rectangle.run)
@@ -96,6 +103,10 @@ def main():
     font_test_parser.set_defaults(func=extender.run_font_test)
     font_test_parser.add_argument("-i", "--image_path")
     font_test_parser.add_argument("-d", "--fonts_directory")
+    font_test_parser.add_argument("-t", "--text", default="Very nice text")
+    font_test_parser.add_argument("-c", "--text_color", default="#FFFFFF", help="#FFFFFF, FFFFFF")
+    font_test_parser.add_argument("-b", "--background_color", default="#000000", help="#000000")
+
 
     arguments = parser.parse_args()
     arguments.func(arguments)
