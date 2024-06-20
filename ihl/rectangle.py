@@ -54,6 +54,12 @@ class Canvas(QtWidgets.QLabel):
         self.note_text = ""
         self.full_comment_border = True
 
+        self.alpha_flag = True
+
+
+    def switch_alpha_flag(self):
+        self.alpha_flag = not self.alpha_flag
+
     def rotate_color(self):
         self.color_index = (self.color_index + 1) % len(self.colors)
 
@@ -182,8 +188,9 @@ class Canvas(QtWidgets.QLabel):
             painter.setPen(pen)
 
             color = QtGui.QColor(self.brush_color)
-            color.setAlpha(190)
-            brush = QtGui.QBrush(QtGui.QColor(color))
+            color.setAlpha(190 if self.alpha_flag else 255)
+            brush_color = QtGui.QColor(color)
+            brush = QtGui.QBrush(brush_color if self.alpha_flag else brush_color.lighter(130))
             painter.setBrush(brush)
             painter.drawRect(full_rect)
 
@@ -245,32 +252,45 @@ class Canvas(QtWidgets.QLabel):
             # self.counter += 1
             # self.update()
             text_rect = QRectF(event.x() - self.font_size, event.y() - self.font_size, self.font_size * 2, self.font_size * 2)
-            self.draw_number(text_rect)
+            self.draw_number(text_rect, lambda color: color.lighter(130))
 
 
-    def draw_number(self, rect):
+    def draw_number(self, rect, brush_modifier = lambda color: color.lighter(130)):
         self.undos.append(self.pixmap().copy())
 
         painter = self.rectangle_painter(self.pixmap())
-        # text_rect = QRectF(event.x(), event.y(), self.font_size * 2, self.font_size * 2)
-        font = self.get_font()
-        font.setBold(True)
-        painter.setFont(font)
-        painter.drawText(rect, Qt.AlignCenter, str(self.counter))
 
-        pen = painter.pen()
-        pen.setWidth(self.pen_width)
-        pen.setColor(self.pen_color)
-        painter.setPen(pen)
-        painter.setBrush(QtGui.QBrush(QtGui.QColor(self.brush_color)))
+        painter.save()
+
+        # text_rect = QRectF(event.x(), event.y(), self.font_size * 2, self.font_size * 2)
+
+        # pen = painter.pen()
+        # pen.setWidth(self.pen_width)
+        # pen.setColor(self.pen_color)
+        # painter.setPen(pen)
+        # brush_color = QtGui.QColor(self.brush_color)
+        # painter.setBrush(QtGui.QBrush(brush_color))
 
         # painter.drawPixmap(QtCore.QPoint(), self.pixmap())
         color = painter.brush().color()
-        color.setAlpha(self.alpha + self.number_alpha_modifier)
-        brush = QtGui.QBrush(QtGui.QColor(color))
+        color.setAlpha(self.alpha + self.number_alpha_modifier if self.alpha_flag else 255)
+        brush_color = QtGui.QColor(color)
+        brush = QtGui.QBrush(brush_color if self.alpha_flag else brush_modifier(brush_color))
         painter.setBrush(brush)
 
         painter.drawRect(rect.normalized())
+
+        font = self.get_font()
+        font.setBold(True)
+        pen = painter.pen()
+        pen.setWidth(self.pen_width)
+        # pen.setColor(self.pen_color if self.alpha_flag else QtGui.QColor("#000000"))
+        pen.setColor(QtGui.QColor("#000000"))
+        painter.setPen(pen)
+        painter.setFont(font)
+        painter.drawText(rect, Qt.AlignCenter, str(self.counter))
+
+        painter.restore()
 
         self.counter += 1
         self.update()
@@ -425,8 +445,9 @@ class Canvas(QtWidgets.QLabel):
         painter.setPen(pen)
 
         color = QtGui.QColor(self.brush_color)
-        color.setAlpha(210)
-        brush = QtGui.QBrush(QtGui.QColor(color))
+        color.setAlpha(210 if self.alpha_flag else 255)
+        brush_color = QtGui.QColor(color)
+        brush = QtGui.QBrush(brush_color if self.alpha_flag else brush_color.lighter(130))
         painter.setBrush(brush)
 
         last_rect = QtCore.QRect(self.last_begin, self.last_destination)
@@ -473,8 +494,9 @@ class Canvas(QtWidgets.QLabel):
         painter.setPen(pen)
 
         color = QtGui.QColor(self.brush_color)
-        color.setAlpha(210)
-        brush = QtGui.QBrush(QtGui.QColor(color))
+        color.setAlpha(210 if self.alpha_flag else 255)
+        brush_color = QtGui.QColor(color)
+        brush = QtGui.QBrush(brush_color if self.alpha_flag else brush_color.lighter(130))
         painter.setBrush(brush)
 
         last_rect = QtCore.QRect(self.last_begin, self.last_destination)
@@ -810,6 +832,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if event.key() == Qt.Key_X:
             self.canvas.connect_two_last_rects()
 
+        if event.key() == Qt.Key_A:
+            self.canvas.switch_alpha_flag()
+
         if event.key() == Qt.Key_Y:
             self.canvas.connect_two_last_rects_by_direct_lines()
 
@@ -913,7 +938,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
     def updateStatusBar(self):
-        m = f"color: {self.canvas.color_index} [TAB], font.size: {self.canvas.font_size} [SHIFT +, SHIFT -], pen.width: {self.canvas.pen_width} [CTRL +, CTRL -], alpha: {self.canvas.alpha} [ALT +, ALT -], text.alpha.modifier: {self.canvas.text_alpha_modifier}, number.alpha.modifier: {self.canvas.number_alpha_modifier} [ALT I, ALT D], counter: {self.canvas.counter} [P, M], undos: {len(self.canvas.undos)}, border {self.canvas.full_comment_border},  [CTRL Z], extend [E], top.comment [T], top.comment.board [R], bottom.comment [B], connect [x, y, q, w], font [F], open [CTRL O]"
+        m = f"color: {self.canvas.color_index} [TAB], font.size: {self.canvas.font_size} [SHIFT +, SHIFT -], pen.width: {self.canvas.pen_width} [CTRL +, CTRL -], alpha: {self.canvas.alpha}, alpha.flag [A]: {self.canvas.alpha_flag} [ALT +, ALT -], text.alpha.modifier: {self.canvas.text_alpha_modifier}, number.alpha.modifier: {self.canvas.number_alpha_modifier} [ALT I, ALT D], counter: {self.canvas.counter} [P, M], undos: {len(self.canvas.undos)}, border {self.canvas.full_comment_border},  [CTRL Z], extend [E], top.comment [T], top.comment.board [R], bottom.comment [B], connect [x, y, q, w], font [F], open [CTRL O]"
         self.statusBar.showMessage(m)
 
 
